@@ -1,0 +1,9 @@
+interface entre Elementary Os y Arduino
+
+bash
+
+para compilar:
+arduino-cli compile .
+
+Para subir:
+arduino-cli upload -p /dev/ttyUSB0 .
