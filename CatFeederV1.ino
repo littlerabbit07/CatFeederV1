@@ -10,6 +10,18 @@ const int CLOSED_US = 1445; // ~85º
 const int OPEN_US   = 1695; // ~110º
 int lastTriggeredMinute = -1; // Start with "no trigger yet"
 
+// Feeding schedule (hour, minute)
+const byte feedingTimes[][2] = {
+  {5, 0}, {5, 30},
+  {6, 0},
+  {7, 0}, {7, 30},
+  {12, 0},
+  {18, 0}, {18, 30},
+  {19, 0},
+  {22, 0}, {22, 30},
+  {23, 0}
+};
+const byte feedingCount = sizeof(feedingTimes) / sizeof(feedingTimes[0]);
 
 void moveFeeder() {
   myServo.attach(9);
@@ -44,6 +56,7 @@ void moveFeeder() {
   Serial.print(now.minute(), DEC);
   Serial.print(':');
   Serial.print(now.second(), DEC);
+  Serial.println("] Feeded automatically.");
 }
 
 void setup() {
@@ -64,46 +77,38 @@ void setup() {
   // Uncomment the next line, upload once, then comment it again.
   // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 
-
-  // Servo INIT and move and feed
-  moveFeeder(); // RESET Feed
-  Serial.println("] Feeded by button.");
-
+  // Servo INIT and feed once on boot
+  moveFeeder(); 
+  Serial.println("Initial feed done.");
 }
 
 void loop() {
-
+  // Manual feed via Serial
   if (Serial.available()) {
     char command = Serial.read();
     if (command == 'f') {  // f = feed
-      moveFeeder(); // Test feed
-      Serial.println("] Feeded by web ");  
+      moveFeeder();
+      Serial.println("Feeded by manual command.");
     }
   }
 
   DateTime now = rtc.now();
-  int h = now.hour();
-  int m = now.minute();
+  byte h = now.hour();
+  byte m = now.minute();
 
-  // Check if current time matches any schedule
-  if ((h == 6 && (m == 0 || m == 30)) ||
-      (h == 7 && m == 0) ||
-      (h == 12 && (m == 0 || m == 30)) ||
-      (h == 13 && m == 0) ||
-      (h == 17 && m == 0) ||
-      (h == 18 && m == 0) ||
-      (h == 19 && m == 0) ||
-      (h == 20 && m == 0) ||
-      (h == 21 && m == 0)) {
-
-    if (m != lastTriggeredMinute) {
-      moveFeeder(); // Test feed
-      lastTriggeredMinute = m;
+  // Check feeding schedule
+  for (byte i = 0; i < feedingCount; i++) {
+    if (h == feedingTimes[i][0] && m == feedingTimes[i][1]) {
+      if (m != lastTriggeredMinute) {
+        moveFeeder();
+        lastTriggeredMinute = m;
+      }
+      return; // No need to check further
     }
-
-  } else {
-    lastTriggeredMinute = -1;  // Reset trigger control
   }
+
+  // Not a feeding time → reset trigger
+  lastTriggeredMinute = -1;
 
   delay(1000);
 }
